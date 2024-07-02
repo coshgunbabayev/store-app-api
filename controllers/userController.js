@@ -1,9 +1,13 @@
 import jwt from 'jsonwebtoken';
 
 import User from '../models/userModel.js';
+
 import {
     sendVerificationCode
 } from '../smtp/send.js'
+import {
+    generateVerificationCode
+} from '../modules/randomGenerate.js';
 
 const signupUser = async (req, res) => {
     try {
@@ -56,6 +60,66 @@ const signupUser = async (req, res) => {
     };
 };
 
+const verifyUser = async (req, res) => {
+    const { token, code } = req.body;
+    let user;
+
+    try {
+        var { userId, purpose } = jwt.verify(token, process.env.JWT_VERIFY_SECRET_KEY);
+
+        if (purpose !== 'verify') {
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid token'
+            });
+        };
+
+        user = await User.findById(userId);
+
+        if (!user) {
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid token'
+            });
+        };
+
+        if (user.verification.status) {
+            return res.status(400).json({
+                success: false,
+                message: 'User already verified'
+            });
+        };
+
+        if (user.verification.code !== code) {
+            user.verification.code = generateVerificationCode(6);
+            await user.save();
+            await sendVerificationCode(user.email, user.verification.code);
+
+            return res.status(400).json({
+                success: false,
+                errors: {
+                    code: 'Invalid verification code, we send a new verification code'
+                }
+            });
+        } else {
+            user.verification = {
+                status: true
+            };
+
+            await user.save();
+
+            return res.status(200).json({
+                success: true
+            });
+        };
+    } catch (err) {
+        return res.status(401).json({
+            success: false,
+            message: 'Invalid token'
+        });
+    };
+};
+
 const loginUser = (req, res) => {
     // do something
 };
@@ -66,6 +130,7 @@ const logoutUser = (req, res) => {
 
 export {
     signupUser,
+    verifyUser,
     loginUser,
     logoutUser
 };
