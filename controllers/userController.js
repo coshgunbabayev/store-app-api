@@ -62,75 +62,146 @@ const signupUser = async (req, res) => {
 
 const verifyUser = async (req, res) => {
     const { token, code } = req.body;
-    let user;
+    let decoded;
 
     try {
-        var { userId, purpose } = jwt.verify(token, process.env.JWT_VERIFY_SECRET_KEY);
-
-        if (purpose !== 'verify') {
-            return res.status(401).json({
-                success: false,
-                message: 'Invalid token'
-            });
-        };
-
-        user = await User.findById(userId);
-
-        if (!user) {
-            return res.status(401).json({
-                success: false,
-                message: 'Invalid token'
-            });
-        };
-
-        if (user.verification.status) {
-            return res.status(400).json({
-                success: false,
-                message: 'User already verified'
-            });
-        };
-
-        if (user.verification.code !== code) {
-            user.verification.code = generateVerificationCode(6);
-            await user.save();
-            await sendVerificationCode(user.email, user.verification.code);
-
-            return res.status(400).json({
-                success: false,
-                errors: {
-                    code: 'Invalid verification code, we send a new verification code'
-                }
-            });
-        } else {
-            user.verification = {
-                status: true
-            };
-
-            await user.save();
-
-            return res.status(200).json({
-                success: true
-            });
-        };
+        decoded = await jwt.verify(token, process.env.JWT_VERIFY_SECRET_KEY);
     } catch (err) {
         return res.status(401).json({
             success: false,
             message: 'Invalid token'
         });
     };
+
+    if (decoded.purpose !== 'verify') {
+        return res.status(401).json({
+            success: false,
+            message: 'Invalid token'
+        });
+    };
+
+    const user = await User.findById(decoded.userId);
+
+    if (!user) {
+        return res.status(401).json({
+            success: false,
+            message: 'Invalid token'
+        });
+    };
+
+    if (user.verification.status) {
+        return res.status(400).json({
+            success: false,
+            message: 'User already verified'
+        });
+    };
+
+    if (user.verification.code !== code) {
+        user.verification.code = generateVerificationCode(6);
+        await user.save();
+        await sendVerificationCode(user.email, user.verification.code);
+
+        return res.status(400).json({
+            success: false,
+            errors: {
+                code: 'Invalid verification code, we send a new verification code'
+            }
+        });
+    } else {
+        user.verification = {
+            status: true
+        };
+
+        await user.save();
+
+        return res.status(200).json({
+            success: true
+        });
+    };
 };
 
-const loginUser = (req, res) => {
-    // do something
+const loginUser = async (req, res) => {
+    const { email, password } = req.body;
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+        return res.status(401).json({
+            success: false,
+            message: 'Invalid email or password'
+        });
+    };
+
+    
+
+    if (!await bcrypt.compare(password, user.password)) {
+        return res.status(401).json({
+            success: false,
+            message: 'Invalid email or password'
+        });
+    };
+
+    const token = jwt.sign(
+        {
+            userId: user._id,
+            purpose: 'auth'
+        },
+        process.env.JWT_AUTH_SECRET_KEY,
+        {
+            expiresIn: "7d"
+        }
+    );
+
+    res.cookie('token', token, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "none"
+    });
+
+    res.status(200).json({
+        success: true
+    });
 };
 
 const logoutUser = (req, res) => {
-    // do something
+    res.clearCookie('token');
+
+    res.status(200).json({
+        success: true
+    });
+};
+
+const getUser = async (req, res) => {
+    let user;
+    try {
+        user = await User.findOne({
+            username: req.user.username,
+            verification: {
+                status: true
+            }
+        });
+    } catch (err) {
+        return res.status(400).json({
+            success: false,
+        });
+    };
+
+    if (!user) {
+        return res.status(400).json({
+            success: false
+        });
+    };
+
+    res.status(200).json({
+        success: true,
+        user
+    });
 };
 
 export {
     signupUser,
     verifyUser,
     loginUser,
-    logoutUser
+    logoutUser,
+    getUser
 };
