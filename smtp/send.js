@@ -9,7 +9,7 @@ const sendVerificationCode = (to, code) => {
     sendSmtpEmail.htmlContent = `<html><body><h1>Your verification code is {{params.parameter}}</h1></body></html>`;
     sendSmtpEmail.sender = { "name": "Coşğun Babayev", "email": "coshgunbabayevw13@gmail.com" };
     sendSmtpEmail.to = [{ "email": to }];
-    sendSmtpEmail.headers = { "Some-Custom-Name": "unique-id-1234" };
+    sendSmtpEmail.headers = { "Some-Custom-Name": "unique-_id-1234" };
     sendSmtpEmail.params = { "parameter": code, "subject": "Verification code" };
 
     apiInstance.sendTransacEmail(sendSmtpEmail).then(function (data) {

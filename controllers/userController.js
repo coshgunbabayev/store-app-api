@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 
 import User from '../models/userModel.js';
+import Comment from '../models/commentModel.js';
 
 import {
     sendVerificationCode
@@ -132,7 +133,7 @@ const loginUser = async (req, res) => {
         });
     };
 
-    
+
 
     if (!await bcrypt.compare(password, user.password)) {
         return res.status(401).json({
@@ -198,10 +199,38 @@ const getUser = async (req, res) => {
     });
 };
 
+const getUserComments = async (req, res) => {
+    let user;
+    try {
+        user = await User.findOne({
+            username: req.user.username,
+            verification: {
+                status: true,
+                message: 'User not found'
+            }
+        });
+    } catch (err) {
+        return res.status(400).json({
+            success: false,
+            message: 'User not found'
+        });
+    };
+
+    const comments = await Comment.find({
+        user: user._id
+    }).populate('user', '-password -_id');
+
+    res.status(200).json({
+        success: true,
+        comments
+    });
+};
+
 export {
     signupUser,
     verifyUser,
     loginUser,
     logoutUser,
-    getUser
+    getUser,
+    getUserComments
 };

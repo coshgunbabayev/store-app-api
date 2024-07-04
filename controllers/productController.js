@@ -8,7 +8,7 @@ import averageCalculation from '../modules/averageCalculation.js';
 
 const getProducts = async (req, res) => {
     const products = await Product.find({})
-        .populate('user', '-password -id');
+        .populate('user', '-password -_id');
 
     products.reverse();
 
@@ -90,7 +90,7 @@ const getProduct = async (req, res) => {
     let product;
     try {
         product = await Product.findById(req.params.id)
-            .populate('user', '-password -id');
+            .populate('user', '-password -_id');
     } catch (err) {
         return res.status(400).json({
             success: false,
@@ -149,7 +149,7 @@ const getComment = async (req, res) => {
     let comment;
     try {
         comment = await Comment.findById(req.params.id)
-            .populate('user', '-password -id');
+            .populate('user', '-password -_id');
     } catch (err) {
         return res.status(400).json({
             success: false,
@@ -237,11 +237,44 @@ const shareComment = async (req, res) => {
     };
 };
 
+const deleteComment = async (req, res) => {
+    let comment;
+    try {
+        comment = await Comment.findById(req.params.id)
+            .populate('user', '-password');
+    } catch (err) {
+        return res.status(400).json({
+            success: false,
+            message: 'Comment not found'
+        });
+    };
+
+    if (!comment) {
+        return res.status(404).json({
+            success: false,
+            message: 'Comment not found'
+        });
+    }; 
+
+    if (comment.user._id.equals(req.user._id)) {
+        return res.status(400).json({
+            success: false,
+            message: 'Comment owner is not authorized'
+        });
+    };
+
+    await Comment.findByIdAndDelete(comment._id);
+
+    res.status(200).json({
+        success: true
+    });
+};
+
 const getComments = async (req, res) => {
     let product;
     try {
         product = await Product.findById(req.params.id)
-            .populate('user', '-password -id');
+            .populate('user', '-password -_id');
     } catch (err) {
         return res.status(400).json({
             success: false,
@@ -258,7 +291,7 @@ const getComments = async (req, res) => {
 
     const comments = await Comment.find({
         product: product._id
-    }).populate('user', '-password -id');
+    }).populate('user', '-password -_id');
 
     comments.reverse();
 
@@ -276,5 +309,6 @@ export {
     deleteProduct,
     getComment,
     shareComment,
+    deleteComment,
     getComments
 };

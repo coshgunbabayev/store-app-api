@@ -5,7 +5,8 @@ import {
     verifyUser,
     loginUser,
     logoutUser,
-    getUser
+    getUser,
+    getUserComments
 } from '../controllers/userController.js';
 
 const router = express.Router();
@@ -24,5 +25,8 @@ router.route('/logout')
 
 router.route('/:username')
     .get(getUser);
+
+router.route('/:usename/comments')
+    .get(getUserComments);
 
 export default router;

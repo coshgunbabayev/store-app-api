@@ -8,6 +8,7 @@ import {
     deleteProduct,
     getComment,
     shareComment,
+    deleteComment,
     getComments
 } from '../controllers/productController.js';
 
@@ -29,7 +30,8 @@ router.route('/:id')
 
 router.route('/comment/:id')
     .get(getComment)
-    .post(authenticate, Image.single("image"), shareComment);
+    .post(authenticate, Image.single("image"), shareComment)
+    .delete(authenticate, deleteComment);
 
 router.route('/:id/comments')
     .get(getComments);
